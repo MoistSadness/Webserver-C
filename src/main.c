@@ -25,11 +25,15 @@ int main(){
         perror("Webserver (socket)");
         return 1;
     }
-    printf("Socket created successfuly!\n");
+    printf("Socket created successfully!\n");
 
     // Creating the address to bind the socket to 
     struct sockaddr_in host_addr;                           // Creating structure for local address
     int host_addrlen = sizeof(host_addr);
+
+    // Creating client address
+    struct sockaddr_in client_addr;
+    int client_addrlen = sizeof(client_addr);
                                                             // *** Setting the address variables ***
     host_addr.sin_family = AF_INET;                         // AF_INET refers to IP/TCP
     host_addr.sin_port = htons(PORT);
@@ -57,14 +61,35 @@ int main(){
             perror("Webserver (accept)");
             continue;
         }
-        printf("Connection accepted\n");
 
-        // Reading from socket
+        // Get client address
+        int clientSocket = getsockname(newsockfd, (struct sockaddr *)&client_addr,(socklen_t *)&client_addrlen);
+        if(clientSocket < 0){
+            perror("Webserver (getsockname)");
+            continue;
+        }
+
+        // Reading from socket. The entire HTTP request will be stored inside buffer
         int socketRead = read(newsockfd, buffer, BUFFER_SIZE);
         if(socketRead < 0){
             perror("Webserver (read)");
             continue;
         }
+
+        // The requesst has the following structure: <method> <path> <version> - creating variables to store them
+        char method[BUFFER_SIZE], uri[BUFFER_SIZE], version[BUFFER_SIZE];
+        sscanf(buffer, "%s %s %s", method, uri, version);       // Parse the request header
+
+        /*** Display HTTP request information and the client IP address from which it has arived ***
+            inet_ntoa() converts network byte order to a IPV4 string 
+            ntohl() converts integer from network byte order to host byte order. 
+            This distinction has to be made to account for different CPU architectures. Some are in big endian, others are in little endian and are not compatible with each other.*/
+        printf("%s %s %s \t inbound request from \t [%s:%u]\n",method, uri, version, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));  
+
+
+        // Run some code based on the method here. Set up a switch statement to determine what do if the request is GET, POST, etc... Maybe add some DB functionality
+
+        // Route the reqest based on the URI. Use a filesystem based routing system like in Next.js
 
         // Write to socket
         int socketWrite = write(newsockfd, response, strlen(response));
