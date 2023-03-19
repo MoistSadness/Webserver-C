@@ -6,9 +6,32 @@
 #include <fcntl.h> // for open
 #include <unistd.h> // for close
 
-
 #define PORT 8080
 #define BUFFER_SIZE 1024
+
+
+/* The request needs to be handled
+
+*/
+void handle_http_request(int newsockfd, char* method, char* uri, char* version, char* response){
+    // Run some code based on the method here, GET, POST, etc... A switch statement cannot be used with strings, so an if/else block will have to be set up with strcmp.
+    if (strcmp(method, "GET") == 0){
+        printf("Get request!\n");
+    } else if (strcmp(method, "POST") == 0){
+        printf("Post request!\n");
+    } else {
+        printf("Invalid request!\n");
+    }
+
+    // Route the reqest based on the URI. Use a filesystem based routing system like in Next.js
+
+    int socketWrite = write(newsockfd, response, strlen(response));
+    if(socketWrite < 0){
+        perror("Webserver (write)");
+        return;
+        //continue;
+    }
+}
 
 int main(){
     char buffer[BUFFER_SIZE];
@@ -84,19 +107,10 @@ int main(){
             inet_ntoa() converts network byte order to a IPV4 string 
             ntohl() converts integer from network byte order to host byte order. 
             This distinction has to be made to account for different CPU architectures. Some are in big endian, others are in little endian and are not compatible with each other.*/
-        printf("%s %s %s \t inbound request from \t [%s:%u]\n",method, uri, version, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));  
+        printf("%s %s %s \t from \t [%s:%u]\n",method, uri, version, inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));  
 
-
-        // Run some code based on the method here. Set up a switch statement to determine what do if the request is GET, POST, etc... Maybe add some DB functionality
-
-        // Route the reqest based on the URI. Use a filesystem based routing system like in Next.js
-
-        // Write to socket
-        int socketWrite = write(newsockfd, response, strlen(response));
-        if(socketWrite < 0){
-            perror("Webserver (write)");
-            continue;
-        }
+        // Handle the request now that it has been confirmed and printed to screen
+        handle_http_request(newsockfd, method, uri, version, response);
 
         close(newsockfd);
     }

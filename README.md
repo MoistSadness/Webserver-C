@@ -19,3 +19,4 @@ The goal will be to have this eventually deployed on AWS and accessible to the w
 
 ### Resources:
 - https://bruinsslot.jp/post/simple-http-webserver-in-c/
+- https://github.com/bloominstituteoftechnology/C-Web-Server/blob/master/src/server.c
