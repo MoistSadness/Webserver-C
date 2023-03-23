@@ -17,33 +17,22 @@
  * Return a file pointer
  * 
 */
-char* readHtmlFile(char* pagesRoot){
+FILE* readHtmlFile(char* pagesRoot){
     //printf("Reading file\n");
+    FILE *fp;
 
-    char testfile[] = "./testfile.html";
-    FILE* fp;
-
-    struct stat st;     // Store file data here
-    if (stat(pagesRoot, &st) ==0) printf("File size is %d\n", st.st_size);      // Get the size of the file in bytes
-
-    // Dynamically allocate memory for file, read it into buffer and print it
-    char* fileBuffer = malloc(st.st_size * sizeof(char));
     
+    return fp;
+}
 
-    // Free memory
+void sendHttpResponse(FILE* fp){
 
-
-
-    return fileBuffer;
 }
 
 /*** Free dynamically allocated memory
 */
 void closeHtmlFile(char* file){
-    free(file);
-    if(file){       // If the pointer is still allocated, send an error message
-        perror("Webserver (free)");
-    }
+    
 }
 
 /*** The request needs to be handled
@@ -82,7 +71,49 @@ void handle_http_request(int newsockfd, char* method, char* uri, char* version){
 
 
     // Read HTML file
-    char* file = readHtmlFile(pagesRoot);
+    struct stat st;     // Store file data here
+    if (stat(pagesRoot, &st) ==0) printf("File size is %d\n", st.st_size);      // Get the size of the file in bytes
+
+
+
+
+    /**/
+    // Dynamically allocate memory for file, read it into buffer and print it
+    int fileBufferSize = (st.st_size * sizeof(char)) + 1;
+    char* fileBuffer = (char*)malloc(fileBufferSize);
+    strcpy(fileBuffer, "");
+    char* current = fileBuffer;     // represents the current position of the file pointer
+    printf("Dynamically allocating %d bytes\n", fileBufferSize);
+
+    // We will be reading 4096 bytes at a time
+    int bytesRead, chunk = 20, buffersize = sizeof(fileBuffer) / sizeof(char);
+    char temparr[chunk];
+
+    int totalBytesRead = 0;
+    // Open the file
+    FILE *file = fopen(pagesRoot, "r");
+    if (file){
+        do {
+            bytesRead = fread(temparr, sizeof(char), chunk, file);
+            strncat(current, temparr, chunk);
+            current += bytesRead;
+            totalBytesRead += bytesRead;
+        } while (bytesRead == chunk);
+
+        // Close file
+        fclose(file);
+        // Ternimate the buffer so string functions can work on it
+        *current = '\0';
+        printf("%s", fileBuffer);
+        printf("%d bytes have been read\n", totalBytesRead);
+    } else perror("Webserver (fopen)");
+
+
+
+    // Free memory
+    free(fileBuffer);
+    printf("Freeing Memory\n");
+
 
 
    
