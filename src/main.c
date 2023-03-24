@@ -12,41 +12,21 @@
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
-/*** Read an HTML file into memory
- * Takes a path to the desired file as input
- * Return a file pointer
- * 
-*/
-FILE* readHtmlFile(char* pagesRoot){
-    //printf("Reading file\n");
-    FILE *fp;
-
-    
-    return fp;
-}
-
-void sendHttpResponse(FILE* fp){
-
-}
-
-/*** Free dynamically allocated memory
-*/
-void closeHtmlFile(char* file){
-    
-}
-
 /*** The request needs to be handled
  * Run some code based on the method here, GET, POST, etc... Basic CRUD functionality will be handled for now.
  * 
 */
 void handle_http_request(int newsockfd, char* method, char* uri, char* version){
+    /**/
     char response[] = "HTTP/1.0 200 OK\r\n"
         "Server: webserver-c\r\n"
         "Content-type: text/html\r\n\r\n"
         "<html>hello, world</html>\r\n";
+    
 
     // This is the root directory for the HTML page router 
-    char pagesRoot[] = "../pages/index.html";
+    char pagesRoot[] = "../pages/sauce/bechamel.html"; 
+    //char pagesRoot[] = "testfile.html";
 
     // A switch statement cannot be used with strings, so an if/else block will have to be set up with strcmp.
     if (strcmp(method, "GET") == 0){                                            // READ
@@ -72,21 +52,29 @@ void handle_http_request(int newsockfd, char* method, char* uri, char* version){
 
     // Read HTML file
     struct stat st;     // Store file data here
-    if (stat(pagesRoot, &st) ==0) printf("File size is %d\n", st.st_size);      // Get the size of the file in bytes
+    if (stat(pagesRoot, &st) ==0) printf("File size is %lld\n", st.st_size);      // Get the size of the file in bytes
+    /*
+    char response_headers[] = "HTTP/1.0 200 OK\r\n"
+        "Server: webserver-c\r\n"
+        "Content-type: text/html\r\n\r\n";
+    */
 
-
-
-
-    /**/
+    /*** BUILDING HTML FILE
+     * 
+    */
     // Dynamically allocate memory for file, read it into buffer and print it
-    int fileBufferSize = (st.st_size * sizeof(char)) + 1;
+
+
+
+    // Add the size of response_headers to size of the html file + 1 for string terminator
+    int fileBufferSize = (sizeof(response_headers) + (st.st_size * sizeof(char)) + sizeof(response_headers)) + 1;   
     char* fileBuffer = (char*)malloc(fileBufferSize);
-    strcpy(fileBuffer, "");
-    char* current = fileBuffer;     // represents the current position of the file pointer
+    strcpy(fileBuffer, response_headers);       // Copy response headers into empty resonse memory
+    char* current = fileBuffer + strlen(response_headers);     // move the file pointer to the end of the string to account for copying the response headers.
     printf("Dynamically allocating %d bytes\n", fileBufferSize);
 
     // We will be reading 4096 bytes at a time
-    int bytesRead, chunk = 20, buffersize = sizeof(fileBuffer) / sizeof(char);
+    int bytesRead, chunk = 4096;
     char temparr[chunk];
 
     int totalBytesRead = 0;
@@ -108,24 +96,20 @@ void handle_http_request(int newsockfd, char* method, char* uri, char* version){
         printf("%d bytes have been read\n", totalBytesRead);
     } else perror("Webserver (fopen)");
 
-
-
-    // Free memory
-    free(fileBuffer);
-    printf("Freeing Memory\n");
-
-
-
-   
-    int socketWrite = write(newsockfd, response, strlen(response));
+    fflush(stdout);
+    //int socketWrite = write(newsockfd, response, strlen(response));
+    int socketWrite = write(newsockfd, fileBuffer, strlen(fileBuffer));
     if(socketWrite < 0){
         perror("Webserver (write)");
         return;
         //continue;
     }
+    printf("%lu\n", strlen(fileBuffer));
 
-    // Close HTML file and free the used memory
-    closeHtmlFile(file);
+    // Free memory
+    free(fileBuffer);
+    printf("Freeing Memory\n\n");
+
 }
 
 /*** Route a GET reqest based on the URI. Use a filesystem based routing system like in Next.js

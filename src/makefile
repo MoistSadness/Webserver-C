@@ -4,7 +4,6 @@ OBJ = main.o
 
 # The default command does everything, it clears the terminal, compiles the app, and runs it. Just type make!
 server: $(OBJ)
-	clear
 	$(CC) -o server $(OBJ)
 	chmod 755 server
 	./server
