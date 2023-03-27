@@ -12,21 +12,74 @@
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
+/* Takes in a file pointer to the response, the location of the target file, and the current size of the response
+  * Get the file size of the target string
+  * Allocate memory for current string size + target string size
+  * Copy contents of original string to the new buffer
+  * Open target file
+  * Append contents of target file to the new buffer 
+  * Update current size of response by reference
+  * Print the new file size
+  * Return the char* for the new buffer
+*/
+char* openFileAndAddToString(char* response, char* targetFile, int* responseSize){
+    // Declaring variables
+    char* buffer;
+    int bufferSize;
+
+    // Get the file size of the target string
+    struct stat st;
+    if (stat(targetFile, &st) == 0) {
+        bufferSize = st.st_size + (*responseSize);
+        printf("Target file size is %lld\n", st.st_size);      // Get the size of the file in bytes
+        } else return "Failed";
+
+    //Allocate memory for current string size + target string size
+    printf("Allocating %d + %lld = %d for new string\n", 
+        *responseSize, 
+        st.st_size, 
+        bufferSize
+    ); 
+    buffer = (char*)malloc(bufferSize);
+    strcpy(buffer, response);       // Copy contents of original string to the new buffer
+    char* current = buffer + (*responseSize) - 1;     // subtract 1 from the position to remove the '/0' string terminator otherwise the string won't be read
+
+    int bytesRead, chunk = 20;
+    char temparr[chunk];
+    int totalBytesRead = 0;
+    
+    FILE *file = fopen(targetFile, "r");
+    if (file){
+        do {
+            bytesRead = fread(temparr, sizeof(char), chunk, file);
+            //printf("%s\n", temparr);
+            memcpy(current, temparr, chunk);
+            current += bytesRead;
+            totalBytesRead += bytesRead;
+        } while (bytesRead == chunk);
+
+        // Close file
+        fclose(file);
+        // Ternimate the buffer so string functions can work on it
+        *current = '\0';
+        printf("%d bytes have been read\n\n", totalBytesRead);
+    } else perror("Webserver (fopen)");
+
+    // Updating response size with the size of the new response string
+    *responseSize = bufferSize;
+
+    free(response);     // Free the original string
+    return buffer;
+}
+
+
+
+
 /*** The request needs to be handled
  * Run some code based on the method here, GET, POST, etc... Basic CRUD functionality will be handled for now.
  * 
 */
 void handle_http_request(int newsockfd, char* method, char* uri, char* version){
-    /**/
-    char response[] = "HTTP/1.0 200 OK\r\n"
-        "Server: webserver-c\r\n"
-        "Content-type: text/html\r\n\r\n"
-        "<html>hello, world</html>\r\n";
-    
-
-    // This is the root directory for the HTML page router 
-    char pagesRoot[] = "../pages/sauce/bechamel.html"; 
-    //char pagesRoot[] = "testfile.html";
 
     // A switch statement cannot be used with strings, so an if/else block will have to be set up with strcmp.
     if (strcmp(method, "GET") == 0){                                            // READ
@@ -50,28 +103,70 @@ void handle_http_request(int newsockfd, char* method, char* uri, char* version){
     fflush(stdout);
 
 
+
+    /***    BUILDING HTML FILE
+     * Get file size for response_headers, head, navbar, target html amd head_close and add them +1 to get the total size of the response
+     * Allocate memory of response size for string and copy headers into it
+     * Open head file and append it to allocated string
+     * Repeat for navbar, then target html, then footer, then head_close
+     * Write response to socket
+     * Free memory
+    */
+    printf("Building HTML response\n");
+    char response_headers[] = "HTTP/1.0 200 OK\r\n"
+                                "Server: webserver-c\r\n"
+                                "Content-type: text/html\r\n\r\n";
+    
+    char pages[] = "../pages/index.html";                   // This is the root directory for the HTML page router 
+    char headPath[] = "../boilerplate/head.html";               // Path to head html
+    /**/
+    char navbarPath[] = "../boilerplate/navbar.html";           // Path to navbar html
+    char footerPath[] = "../boilerplate/footer.html";           // Path to footer html
+    char headclosePath[] = "../boilerplate/head_close.html";    // Path to head_close html
+    
+
+    // Creating the base response that contains only the response headers
+    int responseSize = sizeof(response_headers) / sizeof(char);       // Add 1 extra byte to add string terminator
+    printf("Allocating %d bytes for response headers\n", responseSize); 
+    char* response = (char*)malloc(responseSize);
+    strcpy(response, response_headers);       // Copy response headers into allocated memory
+
+    // Add the head to the html
+    response = openFileAndAddToString(response, headPath, &responseSize);
+
+    // Add the navbar to the html
+    response = openFileAndAddToString(response, navbarPath, &responseSize);
+
+    // Add the target to the html
+    response = openFileAndAddToString(response, pages, &responseSize);
+
+    // Add the footer to the html
+    response = openFileAndAddToString(response, footerPath, &responseSize);
+
+    // Add the head_close to the html
+    response = openFileAndAddToString(response, headclosePath, &responseSize);
+
+
+
+    //printf("\n\n%s\n\n", response);
+
+
+
+
+
+/*
     // Read HTML file
     struct stat st;     // Store file data here
     if (stat(pagesRoot, &st) ==0) printf("File size is %lld\n", st.st_size);      // Get the size of the file in bytes
-    /*
-    char response_headers[] = "HTTP/1.0 200 OK\r\n"
-        "Server: webserver-c\r\n"
-        "Content-type: text/html\r\n\r\n";
-    */
 
-    /*** BUILDING HTML FILE
-     * 
-    */
     // Dynamically allocate memory for file, read it into buffer and print it
 
-
-
     // Add the size of response_headers to size of the html file + 1 for string terminator
-    int fileBufferSize = (sizeof(response_headers) + (st.st_size * sizeof(char)) + sizeof(response_headers)) + 1;   
-    char* fileBuffer = (char*)malloc(fileBufferSize);
-    strcpy(fileBuffer, response_headers);       // Copy response headers into empty resonse memory
-    char* current = fileBuffer + strlen(response_headers);     // move the file pointer to the end of the string to account for copying the response headers.
-    printf("Dynamically allocating %d bytes\n", fileBufferSize);
+    int responseSize = (sizeof(response_headers) + (st.st_size * sizeof(char)) + sizeof(response_headers)) + 1;   
+    char* response = (char*)malloc(responseSize);
+    strcpy(response, response_headers);       // Copy response headers into empty resonse memory
+    char* current = response + strlen(response_headers);     // move the file pointer to the end of the string to account for copying the response headers.
+    printf("Dynamically allocating %d bytes\n", responseSize);
 
     // We will be reading 4096 bytes at a time
     int bytesRead, chunk = 4096;
@@ -92,22 +187,26 @@ void handle_http_request(int newsockfd, char* method, char* uri, char* version){
         fclose(file);
         // Ternimate the buffer so string functions can work on it
         *current = '\0';
-        printf("%s", fileBuffer);
+        printf("%s", response);
         printf("%d bytes have been read\n", totalBytesRead);
     } else perror("Webserver (fopen)");
 
+*/
+
+
+
+
     fflush(stdout);
-    //int socketWrite = write(newsockfd, response, strlen(response));
-    int socketWrite = write(newsockfd, fileBuffer, strlen(fileBuffer));
+    int socketWrite = write(newsockfd, response, strlen(response));
     if(socketWrite < 0){
         perror("Webserver (write)");
         return;
         //continue;
     }
-    printf("%lu\n", strlen(fileBuffer));
+    //printf("%lu\n", strlen(response));
 
     // Free memory
-    free(fileBuffer);
+    free(response);
     printf("Freeing Memory\n\n");
 
 }
@@ -204,6 +303,5 @@ int main(){
 
         close(newsockfd);
     }
-
     return 0;
 }
