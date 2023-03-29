@@ -72,38 +72,6 @@ char* openFileAndAddToString(char* response, char* targetFile, int* responseSize
     return buffer;
 }
 
-
-
-
-/*** The request needs to be handled
- * Run some code based on the method here, GET, POST, etc... Basic CRUD functionality will be handled for now.
- * 
-*/
-void handle_http_request(int newsockfd, char* method, char* uri, char* version){
-
-    // A switch statement cannot be used with strings, so an if/else block will have to be set up with strcmp.
-    if (strcmp(method, "GET") == 0){                                            // READ
-        printf("Get request!\n");
-        // Serve html files based on what the URI is
-        //router(uri);
-    } 
-    else if (strcmp(method, "POST") == 0){                                      // CREATE
-        printf("Post request!\n");
-    } 
-    else if (strcmp(method, "POST") == 0 || strcmp(method, "PUT") == 0){        // UPDATE
-        printf("Update request!\n");
-    } 
-    else if (strcmp(method, "DELETE") == 0){                                    // DELETE
-        printf("Delete request!\n");
-    } 
-    else {
-        printf("Invalid request!\n");
-    }
-
-    fflush(stdout);
-
-
-
     /***    BUILDING HTML FILE
      * Get file size for response_headers, head, navbar, target html amd head_close and add them +1 to get the total size of the response
      * Allocate memory of response size for string and copy headers into it
@@ -112,12 +80,12 @@ void handle_http_request(int newsockfd, char* method, char* uri, char* version){
      * Write response to socket
      * Free memory
     */
+char * buildHtmlFile(char* pages){
     printf("Building HTML response\n");
     char response_headers[] = "HTTP/1.0 200 OK\r\n"
                                 "Server: webserver-c\r\n"
                                 "Content-type: text/html\r\n\r\n";
     
-    char pages[] = "../pages/index.html";                   // This is the root directory for the HTML page router 
     char headPath[] = "../boilerplate/head.html";               // Path to head html
     /**/
     char navbarPath[] = "../boilerplate/navbar.html";           // Path to navbar html
@@ -146,53 +114,59 @@ void handle_http_request(int newsockfd, char* method, char* uri, char* version){
     // Add the head_close to the html
     response = openFileAndAddToString(response, headclosePath, &responseSize);
 
-
-
-    //printf("\n\n%s\n\n", response);
-
-
+    return response;
+}
 
 
 
-/*
-    // Read HTML file
-    struct stat st;     // Store file data here
-    if (stat(pagesRoot, &st) ==0) printf("File size is %lld\n", st.st_size);      // Get the size of the file in bytes
-
-    // Dynamically allocate memory for file, read it into buffer and print it
-
-    // Add the size of response_headers to size of the html file + 1 for string terminator
-    int responseSize = (sizeof(response_headers) + (st.st_size * sizeof(char)) + sizeof(response_headers)) + 1;   
-    char* response = (char*)malloc(responseSize);
-    strcpy(response, response_headers);       // Copy response headers into empty resonse memory
-    char* current = response + strlen(response_headers);     // move the file pointer to the end of the string to account for copying the response headers.
-    printf("Dynamically allocating %d bytes\n", responseSize);
-
-    // We will be reading 4096 bytes at a time
-    int bytesRead, chunk = 4096;
-    char temparr[chunk];
-
-    int totalBytesRead = 0;
-    // Open the file
-    FILE *file = fopen(pagesRoot, "r");
-    if (file){
-        do {
-            bytesRead = fread(temparr, sizeof(char), chunk, file);
-            strncat(current, temparr, chunk);
-            current += bytesRead;
-            totalBytesRead += bytesRead;
-        } while (bytesRead == chunk);
-
-        // Close file
-        fclose(file);
-        // Ternimate the buffer so string functions can work on it
-        *current = '\0';
-        printf("%s", response);
-        printf("%d bytes have been read\n", totalBytesRead);
-    } else perror("Webserver (fopen)");
-
+/*** The request needs to be handled
+ * Run some code based on the method here, GET, POST, etc... Basic CRUD functionality will be handled for now.
+ * 
 */
+void handle_http_request(int newsockfd, char* method, char* uri, char* version){
+    char pages[] = "../pages";                   // This is the root directory for the HTML page router 
 
+    // A switch statement cannot be used with strings, so an if/else block will have to be set up with strcmp.
+    if (strcmp(method, "GET") == 0){                                            // READ
+        printf("Get request!\n");
+        // Serve html files based on what the URI is
+        //router(uri);
+    } 
+    else if (strcmp(method, "POST") == 0){                                      // CREATE
+        printf("Post request!\n");
+    } 
+    else if (strcmp(method, "POST") == 0 || strcmp(method, "PUT") == 0){        // UPDATE
+        printf("Update request!\n");
+    } 
+    else if (strcmp(method, "DELETE") == 0){                                    // DELETE
+        printf("Delete request!\n");
+    } 
+    else {
+        printf("Invalid request!\n");
+    }
+
+    fflush(stdout);
+
+    /*** Router
+     * 
+    
+
+    // Build path to the target html file. Add the uri to the base path for the pages to get a base path
+    printf("%d %d \n", strlen(pages), strlen(uri));
+    char* pagepath = (char*)malloc(strlen(pages) + strlen(uri) + 1);
+    memcpy(pagepath, pages, strlen(pages));
+    strncat(pagepath, uri, strlen(uri));
+
+    // Check the to see if it ends with a  '/' character. If it does, add 'index.html' so it sends the root file to the client
+    // Check to see if there is an -/index.html file to see if the root of that directory exists. Otherwise send a 404
+
+
+    printf("The file is located at %s\n", pagepath);
+
+    */
+
+    char pagepath[] = "../pages/index.html";  
+    char* response = buildHtmlFile(pagepath);
 
 
 
@@ -203,11 +177,11 @@ void handle_http_request(int newsockfd, char* method, char* uri, char* version){
         return;
         //continue;
     }
-    //printf("%lu\n", strlen(response));
 
     // Free memory
+    //free(pagepath);
     free(response);
-    printf("Freeing Memory\n\n");
+    //printf("Freeing Memory\n\n");
 
 }
 
